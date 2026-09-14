@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>۲۰۴۸ فکری</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; }
+  html, body {
+    height:100%; width:100%;
+    background: #0f1220;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    touch-action:none;
+    overflow:hidden;
+  }
+  #app { width:100%; max-width:420px; padding:18px; }
+  #topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  h1 { color:#f4f6ff; font-size:26px; letter-spacing:1px; }
+  #scores { display:flex; gap:8px; }
+  .scorebox {
+    background:#1c2038; border-radius:10px; padding:8px 14px;
+    color:#8ee8ff; text-align:center; min-width:64px;
+  }
+  .scorebox span { display:block; font-size:11px; color:#7b84ab; }
+  .scorebox b { font-size:18px; color:#eafcff; }
+  #boardWrap {
+    position:relative;
+    background:#1a1e33;
+    border-radius:16px;
+    padding:10px;
+    box-shadow: 0 0 30px rgba(0,255,242,0.08);
+  }
+  #board {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap:10px;
+    aspect-ratio: 1 / 1;
+  }
+  .cell {
+    background: rgba(255,255,255,0.04);
+    border-radius:10px;
+  }
+  .tile {
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    font-weight:800;
+    transition: top 0.12s ease, left 0.12s ease, transform 0.1s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  #controls {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:16px;
+  }
+  #newBtn {
+    background: linear-gradient(90deg,#00fff2,#ff00d4);
+    border:none; color:#0a0a12; font-weight:800;
+    padding:12px 26px; border-radius:24px; font-size:14px;
+    cursor:pointer;
+  }
+  #newBtn:active { transform:scale(0.96); }
+  #howto { color:#5c6690; font-size:12px; line-height:1.7; margin-top:14px; text-align:center; }
+  #overlay {
+    position:fixed; inset:0;
+    background:rgba(5,5,15,0.9);
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    color:#fff; text-align:center; padding:24px;
+    z-index:10;
+  }
+  #overlay h2 { font-size:28px; margin-bottom:10px; background:linear-gradient(90deg,#00fff2,#ff00d4); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #overlay p { color:#a9b4d0; margin-bottom:20px; }
+  #overlay button {
+    background: linear-gradient(90deg,#00fff2,#ff00d4);
+    border:none; color:#0a0a12; font-weight:800;
+    padding:12px 30px; border-radius:24px; font-size:14px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>۲۰۴۸</h1>
+    <div id="scores">
+      <div class="scorebox"><span>امتیاز</span><b id="scoreVal">0</b></div>
+      <div class="scorebox"><span>رکورد</span><b id="bestVal">0</b></div>
+    </div>
+  </div>
+  <div id="boardWrap">
+    <div id="board"></div>
+  </div>
+  <div id="controls">
+    <button id="newBtn">بازی جدید</button>
+  </div>
+  <div id="howto">با انگشتت به چهار طرف بکش (سوایپ) یا از کلیدهای جهت‌دار استفاده کن.<br>خونه‌های هم‌عدد رو با هم ادغام کن تا به ۲۰۴۸ برسی!</div>
+</div>
+
+<div id="overlay">
+  <h2 id="overTitle">باختی!</h2>
+  <p id="overText">امتیاز نهایی: 0</p>
+  <button id="retryBtn">دوباره بازی کن</button>
+</div>
+
+<script>
+const SIZE = 4;
+let grid, score, best = 0, won = false;
+const boardEl = document.getElementById('board');
+const scoreVal = document.getElementById('scoreVal');
+const bestVal = document.getElementById('bestVal');
+const overlay = document.getElementById('overlay');
+const overTitle = document.getElementById('overTitle');
+const overText = document.getElementById('overText');
+
+function emptyGrid() {
+  return Array.from({length: SIZE}, () => Array(SIZE).fill(0));
+}
+
+function randomEmptyCell() {
+  const empties = [];
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) if (grid[r][c]===0) empties.push([r,c]);
+  if (empties.length===0) return null;
+  return empties[Math.floor(Math.random()*empties.length)];
+}
+
+function addRandomTile() {
+  const cell = randomEmptyCell();
+  if (!cell) return;
+  const [r,c] = cell;
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function initGame() {
+  grid = emptyGrid();
+  score = 0;
+  won = false;
+  addRandomTile();
+  addRandomTile();
+  updateScore();
+  render();
+  overlay.style.display = 'none';
+}
+
+function updateScore() {
+  scoreVal.textContent = score;
+  if (score > best) { best = score; }
+  bestVal.textContent = best;
+}
+
+function colorFor(val) {
+  const colors = {
+    2: ['#1c2038', '#eaf6ff'],
+    4: ['#22284a', '#eaf6ff'],
+    8: ['#2b6cff', '#fff'],
+    16: ['#3f7fff', '#fff'],
+    32: ['#6f4dff', '#fff'],
+    64: ['#a13dff', '#fff'],
+    128: ['#ff3dbd', '#fff'],
+    256: ['#ff3d7a', '#fff'],
+    512: ['#ff7a3d', '#fff'],
+    1024: ['#ffbf3d', '#0a0a12'],
+    2048: ['#3dffc4', '#0a0a12'],
+  };
+  return colors[val] || ['#00fff2', '#0a0a12'];
+}
+
+function render() {
+  boardEl.innerHTML = '';
+  const wrapRect = boardEl.getBoundingClientRect();
+  const gap = 10;
+  const cellSize = (wrapRect.width - gap * (SIZE - 1)) / SIZE;
+
+  for (let i=0;i<SIZE*SIZE;i++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    boardEl.appendChild(c);
+  }
+
+  for (let r=0;r<SIZE;r++) {
+    for (let c=0;c<SIZE;c++) {
+      const val = grid[r][c];
+      if (val === 0) continue;
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      const [bg, fg] = colorFor(val);
+      tile.style.background = bg;
+      tile.style.color = fg;
+      tile.style.width = cellSize + 'px';
+      tile.style.height = cellSize + 'px';
+      tile.style.left = (c * (cellSize + gap)) + 'px';
+      tile.style.top = (r * (cellSize + gap)) + 'px';
+      tile.style.fontSize = (val > 512 ? cellSize*0.32 : cellSize*0.4) + 'px';
+      tile.textContent = val;
+      boardEl.appendChild(tile);
+    }
+  }
+}
+
+function cloneGrid(g) { return g.map(row => row.slice()); }
+function gridsEqual(a,b) {
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) if (a[r][c]!==b[r][c]) return false;
+  return true;
+}
+
+function slideRowLeft(row) {
+  let arr = row.filter(v => v !== 0);
+  for (let i=0;i<arr.length-1;i++) {
+    if (arr[i] === arr[i+1]) {
+      arr[i] *= 2;
+      score += arr[i];
+      if (arr[i] === 2048) won = true;
+      arr.splice(i+1,1);
+    }
+  }
+  while (arr.length < SIZE) arr.push(0);
+  return arr;
+}
+
+function move(direction) {
+  const before = cloneGrid(grid);
+
+  function rotateLeft(g) {
+    const ng = emptyGrid();
+    for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) ng[SIZE-1-c][r] = g[r][c];
+    return ng;
+  }
+
+  let rotations = 0;
+  if (direction === 'left') rotations = 0;
+  if (direction === 'up') rotations = 1;
+  if (direction === 'right') rotations = 2;
+  if (direction === 'down') rotations = 3;
+
+  let g = cloneGrid(grid);
+  for (let i=0;i<rotations;i++) g = rotateLeft(g);
+
+  for (let r=0;r<SIZE;r++) g[r] = slideRowLeft(g[r]);
+
+  for (let i=0;i<(4-rotations)%4;i++) g = rotateLeft(g);
+
+  grid = g;
+
+  if (!gridsEqual(before, grid)) {
+    addRandomTile();
+    updateScore();
+    render();
+    checkGameState();
+  }
+}
+
+function canMove() {
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
+    if (grid[r][c] === 0) return true;
+    if (c < SIZE-1 && grid[r][c] === grid[r][c+1]) return true;
+    if (r < SIZE-1 && grid[r][c] === grid[r+1][c]) return true;
+  }
+  return false;
+}
+
+function checkGameState() {
+  if (won) {
+    overTitle.textContent = 'بردی! 🎉';
+    overText.textContent = 'به ۲۰۴۸ رسیدی! امتیاز: ' + score;
+    overlay.style.display = 'flex';
+    won = false;
+    return;
+  }
+  if (!canMove()) {
+    overTitle.textContent = 'باختی!';
+    overText.textContent = 'دیگه حرکتی نمونده. امتیاز نهایی: ' + score;
+    overlay.style.display = 'flex';
+  }
+}
+
+document.getElementById('newBtn').addEventListener('click', initGame);
+document.getElementById('retryBtn').addEventListener('click', initGame);
+
+window.addEventListener('keydown', e => {
+  const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down' };
+  if (map[e.key]) { e.preventDefault(); move(map[e.key]); }
+});
+
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const absX = Math.abs(dx), absY = Math.abs(dy);
+  if (Math.max(absX, absY) < 24) return;
+  if (absX > absY) {
+    move(dx > 0 ? 'right' : 'left');
+  } else {
+    move(dy > 0 ? 'down' : 'up');
+  }
+}, { passive: true });
+
+window.addEventListener('resize', render);
+
+initGame();
+</script>
+</body>
+</html>

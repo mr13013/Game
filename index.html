@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>مجموعه بازی‌ها</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a12">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height:100%; width:100%;
+    background: radial-gradient(circle at 50% 0%, #14142b 0%, #08080f 70%);
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  h1 {
+    color:#eafcff;
+    font-size:28px;
+    margin-bottom:6px;
+    text-shadow: 0 0 12px rgba(0,255,242,0.5);
+  }
+  p.sub {
+    color:#7b84ab;
+    font-size:13px;
+    margin-bottom:34px;
+  }
+  .card {
+    width:100%;
+    max-width:340px;
+    background:#1a1e33;
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:18px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    text-decoration:none;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease;
+  }
+  .card:active { transform: scale(0.97); }
+  .icon {
+    width:56px; height:56px;
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px;
+    flex-shrink:0;
+  }
+  .icon.dodger { background: linear-gradient(135deg, #00fff2, #ff00d4); }
+  .icon.puzzle { background: linear-gradient(135deg, #3dffc4, #6f4dff); }
+  .card-text h2 { color:#eafcff; font-size:18px; margin-bottom:4px; }
+  .card-text p { color:#8891b8; font-size:12px; line-height:1.5; }
+</style>
+</head>
+<body>
+  <h1>مجموعه بازی‌ها</h1>
+  <p class="sub">یکی از بازی‌ها رو انتخاب کن</p>
+
+  <a class="card" href="neon-dodger.html">
+    <div class="icon dodger">⚡</div>
+    <div class="card-text">
+      <h2>Neon Dodger</h2>
+      <p>بازی سریع و اکشن — از موانع فرار کن و امتیاز بگیر</p>
+    </div>
+  </a>
+
+  <a class="card" href="puzzle-2048.html">
+    <div class="icon puzzle">🧩</div>
+    <div class="card-text">
+      <h2>۲۰۴۸ فکری</h2>
+      <p>بازی فکری — اعداد رو ادغام کن و به ۲۰۴۸ برس</p>
+    </div>
+  </a>
+</body>
+</html>

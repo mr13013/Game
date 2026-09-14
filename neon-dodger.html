@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Neon Dodger</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0a12;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    touch-action: none;
+  }
+  #wrap {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    background: radial-gradient(circle at 50% 20%, #14142b 0%, #08080f 100%);
+    display: block;
+    touch-action: none;
+  }
+  #hud {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 18px;
+    color: #eafcff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0,255,255,0.6);
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5,5,15,0.88);
+    color: #fff;
+    text-align: center;
+    padding: 24px;
+  }
+  #overlay h1 {
+    font-size: 32px;
+    background: linear-gradient(90deg, #00fff2, #ff00d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 10px;
+    text-shadow: none;
+  }
+  #overlay p {
+    color: #a9b4d0;
+    font-size: 14px;
+    margin-bottom: 22px;
+    line-height: 1.6;
+    max-width: 280px;
+  }
+  #scoreLine {
+    font-size: 20px;
+    margin-bottom: 18px;
+    color: #7cffcb;
+  }
+  button {
+    background: linear-gradient(90deg, #00fff2, #ff00d4);
+    border: none;
+    color: #0a0a12;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 14px 36px;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0,255,242,0.5);
+  }
+  button:active { transform: scale(0.96); }
+  #hint {
+    position: absolute;
+    bottom: 18px;
+    left: 0; right: 0;
+    text-align: center;
+    color: #5c6690;
+    font-size: 12px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="scoreHud">امتیاز: 0</div>
+    <div id="bestHud">رکورد: 0</div>
+  </div>
+  <div id="hint">با انگشتت (یا ماوس) بکش تا فرار کنی!</div>
+  <div id="overlay">
+    <h1>NEON DODGER</h1>
+    <p>موانع بنفش رو دور بزن! هر چی بیشتر دووم بیاری امتیاز بیشتر میگیری. سرعت بازی هر لحظه بیشتر میشه.</p>
+    <button id="startBtn">شروع بازی</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const scoreHud = document.getElementById('scoreHud');
+const bestHud = document.getElementById('bestHud');
+const startBtn = document.getElementById('startBtn');
+const hint = document.getElementById('hint');
+
+function resize() {
+  const w = Math.min(window.innerWidth, 480);
+  const h = window.innerHeight;
+  canvas.width = w * devicePixelRatio;
+  canvas.height = h * devicePixelRatio;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+let W, H;
+function dims() { W = canvas.width / devicePixelRatio; H = canvas.height / devicePixelRatio; }
+dims();
+
+let player = { x: 0, y: 0, r: 14 };
+let obstacles = [];
+let particles = [];
+let score = 0;
+let best = 0;
+let running = false;
+let spawnTimer = 0;
+let spawnInterval = 900;
+let speedMult = 1;
+let lastTime = 0;
+let pointerActive = false;
+
+function resetGame() {
+  dims();
+  player.x = W / 2;
+  player.y = H - 90;
+  obstacles = [];
+  particles = [];
+  score = 0;
+  spawnTimer = 0;
+  spawnInterval = 900;
+  speedMult = 1;
+}
+
+function spawnObstacle() {
+  const size = 16 + Math.random() * 22;
+  const x = Math.random() * (W - size * 2) + size;
+  const type = Math.random() < 0.15 ? 'wide' : 'normal';
+  obstacles.push({
+    x, y: -size,
+    r: type === 'wide' ? size * 1.4 : size,
+    vy: (2.2 + Math.random() * 1.6) * speedMult,
+    hue: 280 + Math.random() * 60
+  });
+}
+
+function addParticles(x, y, color) {
+  for (let i = 0; i < 18; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6,
+      life: 30,
+      color
+    });
+  }
+}
+
+function update(dt) {
+  spawnTimer += dt;
+  speedMult = 1 + score / 1400;
+  const interval = Math.max(280, spawnInterval - score * 0.6);
+  if (spawnTimer > interval) {
+    spawnTimer = 0;
+    spawnObstacle();
+  }
+
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    o.y += o.vy * (dt / 16.6);
+    if (o.y - o.r > H) obstacles.splice(i, 1);
+    const dx = o.x - player.x, dy = o.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < o.r + player.r - 6) {
+      gameOver();
+      return;
+    }
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  score += dt * 0.01 * speedMult;
+  scoreHud.textContent = 'امتیاز: ' + Math.floor(score);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // grid lines for depth
+  ctx.strokeStyle = 'rgba(0,255,242,0.05)';
+  ctx.lineWidth = 1;
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life / 30;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // obstacles
+  obstacles.forEach(o => {
+    const grad = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
+    grad.addColorStop(0, `hsl(${o.hue}, 100%, 65%)`);
+    grad.addColorStop(1, `hsl(${o.hue}, 100%, 35%)`);
+    ctx.fillStyle = grad;
+    ctx.shadowColor = `hsl(${o.hue}, 100%, 60%)`;
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  // player
+  const pg = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.r);
+  pg.addColorStop(0, '#eafcff');
+  pg.addColorStop(1, '#00fff2');
+  ctx.fillStyle = pg;
+  ctx.shadowColor = '#00fff2';
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function loop(ts) {
+  if (!running) return;
+  const dt = lastTime ? ts - lastTime : 16.6;
+  lastTime = ts;
+  update(dt);
+  if (!running) return;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function gameOver() {
+  running = false;
+  addParticles(player.x, player.y, '#ff5577');
+  draw();
+  best = Math.max(best, Math.floor(score));
+  bestHud.textContent = 'رکورد: ' + best;
+  overlay.style.display = 'flex';
+  overlay.querySelector('h1').textContent = 'باختی!';
+  overlay.querySelector('p').textContent = 'امتیاز تو: ' + Math.floor(score) + ' — دوباره امتحان کن!';
+  startBtn.textContent = 'دوباره بازی کن';
+  hint.style.display = 'none';
+}
+
+function startGame() {
+  resetGame();
+  overlay.style.display = 'none';
+  hint.style.display = 'block';
+  running = true;
+  lastTime = 0;
+  requestAnimationFrame(loop);
+}
+
+startBtn.addEventListener('click', startGame);
+
+function movePlayer(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  player.x = Math.max(player.r, Math.min(W - player.r, clientX - rect.left));
+  player.y = Math.max(player.r, Math.min(H - player.r, clientY - rect.top));
+}
+
+canvas.addEventListener('touchstart', e => {
+  pointerActive = true;
+  const t = e.touches[0];
+  movePlayer(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if (!pointerActive) return;
+  const t = e.touches[0];
+  movePlayer(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { pointerActive = false; });
+
+canvas.addEventListener('mousedown', e => { pointerActive = true; movePlayer(e.clientX, e.clientY); });
+canvas.addEventListener('mousemove', e => { if (pointerActive) movePlayer(e.clientX, e.clientY); });
+window.addEventListener('mouseup', () => { pointerActive = false; });
+
+dims();
+player.x = W / 2;
+player.y = H - 90;
+draw();
+</script>
+</body>
+</html>
