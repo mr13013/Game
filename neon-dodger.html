@@ -327,6 +327,9 @@ dims();
 player.x = W / 2;
 player.y = H - 90;
 draw();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
 </script>
 </body>
 </html>

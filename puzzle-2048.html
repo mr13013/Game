@@ -307,6 +307,9 @@ document.addEventListener('touchend', e => {
 window.addEventListener('resize', render);
 
 initGame();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
 </script>
 </body>
 </html>

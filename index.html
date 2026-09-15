@@ -75,5 +75,12 @@
       <p>بازی فکری — اعداد رو ادغام کن و به ۲۰۴۸ برس</p>
     </div>
   </a>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
 </body>
 </html>
